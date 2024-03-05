@@ -20,6 +20,9 @@ let notes = [
   }
 ]
 
+//let the app use static html from dist folder
+app.use(express.static('dist'))
+
 //allow requests from all origin
 app.use(cors())
 
