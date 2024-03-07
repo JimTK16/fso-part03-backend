@@ -39,37 +39,74 @@ app.get('/api/notes', (req, res) => {
   Note.find({}).then((result) => res.json(result))
 })
 
-app.get('/api/notes/:id', (req, res) => {
-  Note.findById(req.params.id).then((note) => res.json(note))
+app.get('/api/notes/:id', (req, res, next) => {
+  Note.findById(req.params.id)
+    .then((note) => {
+      if (note) {
+        res.json(note)
+      } else {
+        res.status(404).end()
+      }
+    })
+    .catch((error) => next(error))
 })
 
 app.delete('/api/notes/:id', (req, res) => {
-  const id = Number(req.params.id)
-  notes = notes.filter((n) => n.id !== id)
-
-  res.status(204).end()
+  Note.findByIdAndDelete(req.params.id)
+    .then((result) => {
+      res.status(204).end()
+    })
+    .catch((error) => next(error))
 })
 
-const generateId = () => {
-  const maxId = notes.length > 0 ? Math.max(...notes.map((n) => n.id)) : 0
-  return maxId + 1
-}
+app.put('/api/notes/:id', (req, res, next) => {
+  const { content, important } = req.body
 
-app.post('/api/notes', (req, res) => {
+  Note.findByIdAndUpdate(
+    req.params.id,
+    { content, important },
+    { new: true, runValidators: true, context: 'query' }
+  )
+    .then((updatedNote) => {
+      res.json(updatedNote)
+    })
+    .catch((error) => next(error))
+})
+
+app.post('/api/notes', (req, res, next) => {
   const body = req.body
-  if (!body.content) {
-    return res.status(400).json({ error: 'content missing' })
-  }
 
   const note = new Note({
     content: body.content,
     important: body.important || false
   })
 
-  note.save().then((savedNote) => {
-    res.json(savedNote)
-  })
+  note
+    .save()
+    .then((savedNote) => {
+      res.json(savedNote)
+    })
+    .catch((error) => next(error))
 })
+
+const unknownEndpoint = (req, res) => {
+  res.status(404).send({ error: 'unknown enpoint' })
+}
+
+app.use(unknownEndpoint)
+
+const errorHandler = (error, req, res, next) => {
+  console.log(error.message)
+  if (error.name === 'CastError') {
+    return res.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).json({ error: error.message })
+  }
+
+  next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {

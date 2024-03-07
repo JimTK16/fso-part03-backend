@@ -13,7 +13,14 @@ mongoose
     console.log('error connecting to MongoDB', error.message)
   })
 
-const noteSchema = mongoose.Schema({ content: String, important: Boolean })
+const noteSchema = mongoose.Schema({
+  content: {
+    type: String,
+    minLength: 5,
+    required: true
+  },
+  important: Boolean
+})
 
 //modify the response from mongoDb
 noteSchema.set('toJSON', {
